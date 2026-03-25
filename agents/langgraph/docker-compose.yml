@@ -1,0 +1,64 @@
+services:
+  langgraph-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "10002:8000"
+    environment:
+      GOOGLE_STUDIO_API_KEY: ${GOOGLE_STUDIO_API_KEY:?GOOGLE_STUDIO_API_KEY is required}
+      # google-genai / langchain-google-genai also read GOOGLE_API_KEY
+      GOOGLE_API_KEY: ${GOOGLE_STUDIO_API_KEY}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGCHAIN_TRACING_V2: "false"
+      # Postgres connection for checkpointing
+      POSTGRES_URI: postgresql://${POSTGRES_USER:-langgraph}:${POSTGRES_PASSWORD:-langgraph_secret}@postgres:5432/${POSTGRES_DB:-langgraph}
+      # Redis for task queue
+      REDIS_URI: redis://redis:6379
+      # Tell Agent Server which graphs to serve (matches langgraph.json)
+      LANGSERVE_GRAPHS: '{"rhyme_completer": "/deps/langgraph-rhyme/app/graph.py:graph"}'
+    networks:
+      - a2a-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - langgraph
+    restart: unless-stopped
+
+  # Inline infra for standalone mode: override with infra/docker-compose.yml for shared usage
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-langgraph}
+      POSTGRES_USER: ${POSTGRES_USER:-langgraph}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-langgraph_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - a2a-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-langgraph}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - a2a-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  a2a-net:
+    name: a2a-net
+    driver: bridge
+
+volumes:
+  postgres_data:

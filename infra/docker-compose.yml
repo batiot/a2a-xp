@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-langgraph}
+      POSTGRES_USER: ${POSTGRES_USER:-langgraph}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-langgraph_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - a2a-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-langgraph}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - a2a-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  a2a-net:
+    name: a2a-net
+    driver: bridge
+
+volumes:
+  postgres_data:

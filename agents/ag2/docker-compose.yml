@@ -1,0 +1,20 @@
+services:
+  ag2-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "10000:8000"
+    environment:
+      GOOGLE_STUDIO_API_KEY: ${GOOGLE_STUDIO_API_KEY:?GOOGLE_STUDIO_API_KEY is required}
+      AGENT_URL: http://ag2-agent:8000
+    networks:
+      - a2a-net
+    profiles:
+      - ag2
+    restart: unless-stopped
+
+networks:
+  a2a-net:
+    name: a2a-net
+    external: true

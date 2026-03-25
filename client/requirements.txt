@@ -1,0 +1,9 @@
+# HTTP client — used for both AgentCard discovery and A2A task calls
+httpx>=0.28.0
+
+# Pretty terminal output
+rich>=13.0.0
+
+# Dev/test
+pytest>=8.0.0
+pytest-asyncio>=0.24.0

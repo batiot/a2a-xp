@@ -1,0 +1,22 @@
+services:
+  crewai-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "10001:8000"
+    environment:
+      GOOGLE_STUDIO_API_KEY: ${GOOGLE_STUDIO_API_KEY:?GOOGLE_STUDIO_API_KEY is required}
+      # LiteLLM also checks GEMINI_API_KEY for gemini/ model prefix
+      GEMINI_API_KEY: ${GOOGLE_STUDIO_API_KEY}
+      AGENT_URL: http://crewai-agent:8000
+    networks:
+      - a2a-net
+    profiles:
+      - crewai
+    restart: unless-stopped
+
+networks:
+  a2a-net:
+    name: a2a-net
+    external: true

@@ -1,0 +1,36 @@
+# Root Compose — orchestrates all sub-projects via Docker Compose `include:`
+# Requires Docker Compose >= 2.20
+#
+# Usage:
+#   docker compose up                        # all agents + infra
+#   docker compose --profile ag2 up         # AG2 only
+#   docker compose --profile crewai up      # CrewAI only
+#   docker compose --profile langgraph up   # LangGraph + infra
+#   docker compose run client               # run the test client once
+
+include:
+  - path: infra/docker-compose.yml
+  - path: agents/ag2/docker-compose.yml
+  - path: agents/crewai/docker-compose.yml
+  - path: agents/langgraph/docker-compose.yml
+
+services:
+  client:
+    build:
+      context: client
+      dockerfile: Dockerfile
+    environment:
+      AG2_URL:       http://ag2-agent:8000
+      CREWAI_URL:    http://crewai-agent:8000
+      LANGGRAPH_URL: http://langgraph-agent:8000
+    networks:
+      - a2a-net
+    profiles:
+      - client
+    # Runs once and exits — use `docker compose run client`
+    restart: "no"
+
+networks:
+  a2a-net:
+    name: a2a-net
+    external: true

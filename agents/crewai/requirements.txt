@@ -1,0 +1,14 @@
+# a2a-sdk — A2A protocol server plumbing
+a2a-sdk>=1.0.0
+
+# CrewAI — agent framework
+# https://github.com/crewaiinc/crewai
+crewai>=0.100.0
+
+# ASGI server
+uvicorn[standard]>=0.30.0
+
+# Dev/test
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+httpx>=0.28.0

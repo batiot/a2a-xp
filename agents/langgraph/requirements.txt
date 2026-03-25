@@ -1,0 +1,11 @@
+# LangGraph and LangChain dependencies
+# These are installed INTO the langchain/langgraph-api image at build time.
+# The image itself provides the A2A server runtime — no a2a-sdk needed here.
+langgraph>=1.0.0
+langchain-core>=0.3.0
+langchain-google-genai>=2.0.0
+
+# Dev/test (not installed in Docker image, only for local dev)
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+httpx>=0.28.0

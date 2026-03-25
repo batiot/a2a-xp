@@ -33,6 +33,7 @@ agent_card = AgentCard(
             id="rhyme-completer",
             name="Complete a rhyme",
             description="Given partial verses of '3 petits chats', returns the next verse.",
+            tags=[],
             inputModes=["text"],
             outputModes=["text"],
         )

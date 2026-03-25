@@ -29,7 +29,7 @@
 - [x] 3.3 Create `agents/ag2/app/main.py` bootstrapping `A2AStarletteApplication` with `RhymeCompleterExecutor` and returning the ASGI app
 - [x] 3.4 Create `agents/ag2/Dockerfile` (FROM python:3.12-slim, install requirements, CMD uvicorn)
 - [x] 3.5 Create `agents/ag2/docker-compose.yml` exposing port 10000→8000, network `a2a-net`, env `OPENAI_API_KEY`
-- [ ] 3.6 Test standalone: `docker compose up` from `agents/ag2/` and verify `GET http://localhost:10000/.well-known/agent.json` returns 200
+- [x] 3.6 Test standalone: `docker compose up` from `agents/ag2/` and verify `GET http://localhost:10000/.well-known/agent.json` returns 200
 
 ## 4. CrewAI Agent (`agents/crewai/`)
 
@@ -39,7 +39,7 @@
 - [x] 4.3 Create `agents/crewai/app/main.py` bootstrapping `A2AStarletteApplication`
 - [x] 4.4 Create `agents/crewai/Dockerfile` (FROM python:3.12-slim, install requirements)
 - [x] 4.5 Create `agents/crewai/docker-compose.yml` exposing port 10001→8000, network `a2a-net`, env `OPENAI_API_KEY`
-- [ ] 4.6 Test standalone: `docker compose up` from `agents/crewai/` and verify `GET http://localhost:10001/.well-known/agent.json` returns 200
+- [x] 4.6 Test standalone: `docker compose up` from `agents/crewai/` and verify `GET http://localhost:10001/.well-known/agent.json` returns 200
 
 ## 5. LangGraph Agent Server (`agents/langgraph/`)
 
@@ -48,7 +48,7 @@
 - [x] 5.3 Create `agents/langgraph/langgraph.json` descriptor pointing to the compiled graph (`app/graph.py:graph`)
 - [x] 5.4 Create `agents/langgraph/Dockerfile` (FROM `langchain/langgraph-api:python3.12`, mount app code)
 - [x] 5.5 Create `agents/langgraph/docker-compose.yml` with `depends_on: postgres, redis`, exposes port 10002→8000, network `a2a-net`, env `OPENAI_API_KEY`, `LANGSMITH_API_KEY` (optional, can be blank)
-- [ ] 5.6 Test standalone: `docker compose -f infra/docker-compose.yml -f agents/langgraph/docker-compose.yml up` and verify `GET http://localhost:10002/.well-known/agent.json` returns 200
+- [x] 5.6 Test standalone: `docker compose -f infra/docker-compose.yml -f agents/langgraph/docker-compose.yml up` and verify `GET http://localhost:10002/.well-known/agent.json` returns 200
 
 ## 6. A2A Test Client (`client/`)
 
@@ -69,4 +69,4 @@
 - [ ] 8.1 Start all services from root: `docker compose up`
 - [ ] 8.2 Run test client: `docker compose run client` and verify all three AgentCards are printed
 - [ ] 8.3 Verify all three agents return the next line of "3 petits chats" for the same input prompt
-- [ ] 8.4 Document findings (ergonomics, streaming support, memory, quirks) in `README.md` under a "Comparison Notes" section
+- [x] 8.4 Document findings (ergonomics, streaming support, memory, quirks) in `README.md` under a "Comparison Notes" section

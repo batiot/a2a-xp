@@ -1,15 +1,10 @@
-# The langchain/langgraph-api image IS the Agent Server runtime.
-# It provides: FastAPI, task queue, A2A endpoints, postgres checkpointing.
-# We add our graph code and requirements on top.
-FROM langchain/langgraph-api:python3.12
+FROM python:3.12-slim
 
-# Install our graph's Python dependencies
-# (langchain-openai, etc. — must be compatible with the base image's versions)
-ADD requirements.txt /deps/requirements.txt
-RUN pip install --no-cache-dir -r /deps/requirements.txt
+WORKDIR /app
 
-# Copy graph code to the deps folder expected by the Agent Server
-ADD . /deps/langgraph-rhyme
+COPY requirements.txt .
+RUN pip install uv && uv pip install --system --no-cache -r requirements.txt
 
-# The LANGSERVE_GRAPHS env var (or langgraph.json) tells the server which graphs to load
-# This is set in docker-compose.yml via environment or the langgraph.json mount
+COPY app/ ./app/
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

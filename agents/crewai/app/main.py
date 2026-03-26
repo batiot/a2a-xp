@@ -6,40 +6,19 @@ import uvicorn
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
-from a2a.types import AgentCapabilities, AgentCard, AgentSkill
 
 from app.agent_executor import RhymeCompleterExecutor
+from app.crew import get_agent_card
 
 # Fail fast on missing API key
 _GOOGLE_STUDIO_API_KEY = os.environ["GOOGLE_STUDIO_API_KEY"]
 
 AGENT_URL = os.environ.get("AGENT_URL", "http://crewai-agent:8000")
 
-agent_card = AgentCard(
-    name="Rhyme Completer (CrewAI)",
-    description=(
-        "Complète la comptine française '3 petits chats'. "
-        "Envoyez un ou plusieurs vers, l'agent retourne le suivant."
-    ),
-    url=AGENT_URL,
-    version="1.0.0",
-    defaultInputModes=["text"],
-    defaultOutputModes=["text"],
-    capabilities=AgentCapabilities(streaming=False),
-    skills=[
-        AgentSkill(
-            id="rhyme-completer",
-            name="Complete a rhyme",
-            description="Given partial verses of '3 petits chats', returns the next verse.",
-            tags=[],
-            inputModes=["text"],
-            outputModes=["text"],
-        )
-    ],
-)
-
 
 def build_app() -> object:
+    # AgentCard is generated natively by CrewAI from A2AServerConfig
+    agent_card = get_agent_card(AGENT_URL)
     executor = RhymeCompleterExecutor()
     task_store = InMemoryTaskStore()
     handler = DefaultRequestHandler(agent_executor=executor, task_store=task_store)

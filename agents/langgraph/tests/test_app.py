@@ -1,12 +1,11 @@
-"""Tests for the AG2 A2A agent application.
+"""Tests for the LangGraph A2A agent application.
 
-These tests validate the observable HTTP behaviour of the agent:
-- AgentCard discovery (GET /.well-known/agent.json and /.well-known/agent-card.json)
+These tests validate the observable HTTP behaviour of the new a2a-sdk ASGI server:
+- AgentCard discovery (GET /.well-known/agent.json)
 - Valid A2A message/send payload returns agent text response
 - Invalid JSON-RPC payload returns error response
 
-The AG2 LLM is mocked so tests run without a real API key.
-Uses the native ag2.A2aAgentServer introduced in ag2>=0.10.
+The LangGraph graph is mocked so tests run without a real API key.
 """
 from __future__ import annotations
 
@@ -23,6 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # Provide a dummy API key so module-level env checks pass
 os.environ.setdefault("GOOGLE_STUDIO_API_KEY", "test-key")
+os.environ.setdefault("GOOGLE_API_KEY", "test-key")
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.apps import A2AStarletteApplication
@@ -43,7 +43,7 @@ def _make_message_id() -> str:
 
 
 class _EchoExecutor(AgentExecutor):
-    """Test executor that echoes back the user input prefixed with 'echo:'."""
+    """Test executor that echoes back the user input."""
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         text = context.get_user_input()
@@ -64,12 +64,12 @@ def _build_test_app() -> Any:
         outputModes=["text"],
     )
     card = AgentCard(
-        name="Rhyme Completer (AG2)",
+        name="Rhyme Completer (LangGraph)",
         description=(
             "Complète la comptine française '3 petits chats'. "
             "Envoyez un ou plusieurs vers, l'agent retourne le suivant."
         ),
-        url="http://ag2-agent:8000",
+        url="http://langgraph-agent:8000",
         version="1.0.0",
         defaultInputModes=["text"],
         defaultOutputModes=["text"],
@@ -117,9 +117,9 @@ def test_agent_card_declares_rhyme_completer_skill(client: TestClient) -> None:
 
 
 def test_agent_card_name(client: TestClient) -> None:
-    """AgentCard name identifies this as the AG2 agent."""
+    """AgentCard name identifies this as the LangGraph agent."""
     resp = client.get("/.well-known/agent.json")
-    assert "AG2" in resp.json()["name"]
+    assert "LangGraph" in resp.json()["name"]
 
 
 # ---------------------------------------------------------------------------
@@ -196,26 +196,33 @@ def test_unknown_method_returns_method_not_found(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Native A2aAgentServer integration test
+# AgentExecutor unit test — graph.ainvoke integration
 # ---------------------------------------------------------------------------
 
-def test_native_server_builds_and_serves_agent_card() -> None:
-    """build_agent_server() produces a Starlette app serving the correct AgentCard.
+@pytest.mark.asyncio
+async def test_executor_calls_graph_ainvoke() -> None:
+    """RhymeCompleterExecutor calls graph.ainvoke with a HumanMessage and returns result."""
+    mock_last_msg = MagicMock()
+    mock_last_msg.content = "chapeau de paille"
+    mock_result = {"messages": [mock_last_msg]}
 
-    Verifies the native autogen.a2a.A2aAgentServer wiring end-to-end without
-    hitting the real LLM (agent.generate_reply is not called at card endpoint).
-    """
-    from app.agent import build_agent_server
+    with patch("langchain_google_genai.ChatGoogleGenerativeAI") as mock_llm_cls:
+        mock_llm_cls.return_value = MagicMock()
+        import importlib
+        import app.graph as graph_module
+        importlib.reload(graph_module)
 
-    server = build_agent_server("http://ag2-agent:8000")
-    native_app = server.build()
+        from app.agent_executor import RhymeCompleterExecutor
+        executor = RhymeCompleterExecutor()
 
-    tc = TestClient(native_app)
-    # The new canonical endpoint is /.well-known/agent-card.json
-    resp = tc.get("/.well-known/agent-card.json")
-    assert resp.status_code == 200
-    card = resp.json()
-    assert card["name"] == "Rhyme Completer (AG2)"
-    assert card["url"] == "http://ag2-agent:8000"
-    skill_ids = [s["id"] for s in card.get("skills", [])]
-    assert "rhyme-completer" in skill_ids
+        with patch.object(graph_module.graph, "ainvoke", new=AsyncMock(return_value=mock_result)):
+            mock_context = MagicMock(spec=RequestContext)
+            mock_context.get_user_input.return_value = "3 petits chats"
+            mock_queue = AsyncMock(spec=EventQueue)
+
+            # Patch the graph in the executor module as well
+            with patch("app.agent_executor.graph", graph_module.graph):
+                await executor.execute(mock_context, mock_queue)
+
+    mock_context.get_user_input.assert_called_once()
+    mock_queue.enqueue_event.assert_awaited_once()

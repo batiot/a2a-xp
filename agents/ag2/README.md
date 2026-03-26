@@ -2,39 +2,47 @@
 
 ## Implementation
 
-This agent wraps an AG2 `AssistantAgent` in an `a2a-sdk` `AgentExecutor` to expose it via the A2A protocol.
+This agent uses **AG2 v0.11.4** with its native `autogen.a2a.A2aAgentServer` to expose an `AssistantAgent` via the A2A protocol. No manual `a2a-sdk` glue is needed — AG2 handles `AgentCard` generation, `AgentExecutor` wiring, and ASGI app construction natively.
 
 | File | Purpose |
 |---|---|
-| `app/agent.py` | `RhymeCompleterExecutor` — AG2 AssistantAgent + A2A AgentExecutor |
-| `app/main.py` | `A2AStarletteApplication` bootstrap (AgentCard + ASGI app) |
+| `app/agent.py` | `build_agent_server()` — builds `AssistantAgent` + `A2aAgentServer` |
+| `app/main.py` | ASGI app bootstrap via `build_agent_server(url).build()` |
 | `Dockerfile` | `python:3.12-slim` + `uv` + `requirements.txt` |
 
-## Native A2A Audit (`autogen-agentchat==0.7.5`)
+## Native A2A via `autogen.a2a.A2aAgentServer`
 
-**Finding: no native A2A server primitive in this version.**
+```python
+from autogen import AssistantAgent
+from autogen.a2a import A2aAgentServer, CardSettings
 
-Checked `autogen-agentchat==0.7.5` (and bundled `autogen-ext`) for any of:
-- `A2aAgentServer`, `A2AServer`, or equivalent ASGI app factory
-- A dedicated `a2a` submodule
+agent = AssistantAgent(
+    name="rhyme_completer",
+    llm_config={"config_list": [{"api_type": "google", "model": "gemini-2.0-flash-lite", "api_key": ...}]},
+    human_input_mode="NEVER",
+)
 
-None were found. The AG2 changelog notes that native A2A server support was added
-in **v0.10** (released late 2025). At v0.7.5, the idiomatic approach is the
-`a2a-sdk` `AgentExecutor` wrapper used here.
+app = A2aAgentServer(
+    agent=agent,
+    url="http://ag2-agent:8000",
+    agent_card=CardSettings(name="Rhyme Completer (AG2)", skills=[...]),
+).build()
+```
 
-**Why no version upgrade?**
-Upgrading to v0.10+ would require verifying API compatibility for `AssistantAgent`,
-`OpenAIChatCompletionClient`, and task result handling — a separate change. The current
-implementation is clean, tested, and fully A2A-compliant; upgrading when v0.10+ is
-pinned and tested is tracked as future work.
+Key points:
+- `ag2[a2a]` bundles `a2a-sdk[http-server]` — no separate `a2a-sdk` dep needed
+- `ag2[gemini]` brings in `google-genai` for the Gemini LLM client
+- LLM config: `api_type="google"` routes to Google AI Studio via `GOOGLE_STUDIO_API_KEY`
+- Model: `gemini-2.0-flash-lite` (AG2's Google client, not OpenAI-compatible endpoint)
+- `A2aAgentServer.build()` returns a Starlette ASGI app ready for uvicorn
+- New canonical AgentCard endpoint: `/.well-known/agent-card.json` (legacy `/.well-known/agent.json` still works)
 
 ## Quick Start
 
 ```bash
-# Standalone
 cp ../../.env.example ../../.env   # add GOOGLE_STUDIO_API_KEY
 docker compose up
 
 # Verify
-curl http://localhost:10000/.well-known/agent.json
+curl http://localhost:10000/.well-known/agent-card.json
 ```

@@ -1,11 +1,12 @@
 """Tests for the AG2 A2A agent application.
 
 These tests validate the observable HTTP behaviour of the agent:
-- AgentCard discovery (GET /.well-known/agent.json)
+- AgentCard discovery (GET /.well-known/agent.json and /.well-known/agent-card.json)
 - Valid A2A message/send payload returns agent text response
 - Invalid JSON-RPC payload returns error response
 
 The AG2 LLM is mocked so tests run without a real API key.
+Uses the native ag2.A2aAgentServer introduced in ag2>=0.10.
 """
 from __future__ import annotations
 
@@ -88,7 +89,7 @@ def client() -> TestClient:
 
 
 # ---------------------------------------------------------------------------
-# AgentCard discovery tests (task 3.6)
+# AgentCard discovery tests
 # ---------------------------------------------------------------------------
 
 def test_agent_card_returns_200(client: TestClient) -> None:
@@ -122,7 +123,7 @@ def test_agent_card_name(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
-# message/send tests (task 3.6)
+# message/send tests
 # ---------------------------------------------------------------------------
 
 def test_valid_message_send_returns_200(client: TestClient) -> None:
@@ -161,7 +162,6 @@ def test_valid_message_send_returns_agent_text(client: TestClient) -> None:
     body = resp.json()
     assert "result" in body
     result = body["result"]
-    # Echo executor should return "echo:3 petits chats"
     parts = result.get("parts", [])
     texts = [p["text"] for p in parts if p.get("kind") == "text"]
     assert any("echo:" in t for t in texts)
@@ -174,11 +174,9 @@ def test_malformed_json_returns_parse_error(client: TestClient) -> None:
         content="not valid json",
         headers={"content-type": "application/json"},
     )
-    # A2A SDK returns 200 with a JSON-RPC error for malformed JSON
     assert resp.status_code == 200
     body = resp.json()
     assert "error" in body
-    # JSON-RPC parse error code is -32700
     assert body["error"]["code"] == -32700
 
 
@@ -194,36 +192,30 @@ def test_unknown_method_returns_method_not_found(client: TestClient) -> None:
     assert resp.status_code == 200
     body = resp.json()
     assert "error" in body
-    assert body["error"]["code"] == -32601  # Method not found
+    assert body["error"]["code"] == -32601
 
 
 # ---------------------------------------------------------------------------
-# AgentExecutor unit test — get_user_input extraction
+# Native A2aAgentServer integration test
 # ---------------------------------------------------------------------------
 
-@pytest.mark.asyncio
-async def test_executor_uses_get_user_input() -> None:
-    """RhymeCompleterExecutor calls context.get_user_input() and passes result to agent."""
-    # Import here so the module-level env check uses the test key
-    from app.agent import RhymeCompleterExecutor
+def test_native_server_builds_and_serves_agent_card() -> None:
+    """build_agent_server() produces a Starlette app serving the correct AgentCard.
 
-    executor = RhymeCompleterExecutor.__new__(RhymeCompleterExecutor)
+    Verifies the native autogen.a2a.A2aAgentServer wiring end-to-end without
+    hitting the real LLM (agent.generate_reply is not called at card endpoint).
+    """
+    from app.agent import build_agent_server
 
-    mock_context = MagicMock(spec=RequestContext)
-    mock_context.get_user_input.return_value = "3 petits chats"
+    server = build_agent_server("http://ag2-agent:8000")
+    native_app = server.build()
 
-    mock_agent = MagicMock()
-    mock_result = MagicMock()
-    mock_last_msg = MagicMock()
-    mock_last_msg.content = "chapeau de paille"
-    mock_result.messages = [mock_last_msg]
-    mock_agent.run = AsyncMock(return_value=mock_result)
-    executor._agent = mock_agent
-
-    mock_queue = AsyncMock(spec=EventQueue)
-
-    await executor.execute(mock_context, mock_queue)
-
-    mock_context.get_user_input.assert_called_once()
-    mock_agent.run.assert_awaited_once_with(task="3 petits chats")
-    mock_queue.enqueue_event.assert_awaited_once()
+    tc = TestClient(native_app)
+    # The new canonical endpoint is /.well-known/agent-card.json
+    resp = tc.get("/.well-known/agent-card.json")
+    assert resp.status_code == 200
+    card = resp.json()
+    assert card["name"] == "Rhyme Completer (AG2)"
+    assert card["url"] == "http://ag2-agent:8000"
+    skill_ids = [s["id"] for s in card.get("skills", [])]
+    assert "rhyme-completer" in skill_ids

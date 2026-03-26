@@ -2,17 +2,9 @@ from __future__ import annotations
 
 import os
 
-# NOTE: a2a-sdk import paths may vary by version.
-# Run: uv run python -c "import a2a; help(a2a)" to inspect available modules.
-# Or use context7: mcp_context7_get-library-docs for "a2a-sdk"
-from a2a.server.agent_execution import AgentExecutor, RequestContext
-from a2a.server.events import EventQueue
-from a2a.utils.message import new_agent_text_message
-
-from autogen_agentchat.agents import AssistantAgent
-# AG2 uses the OpenAI-compatible endpoint of Google AI Studio.
-# No extra package needed — autogen-ext[openai] already provides OpenAIChatCompletionClient.
-from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen import AssistantAgent
+from autogen.a2a import A2aAgentServer, CardSettings
+from a2a.types import AgentCapabilities, AgentSkill
 
 SYSTEM_PROMPT = """Tu es un expert des comptines françaises pour enfants.
 Quand on te donne un ou plusieurs vers d'une comptine,
@@ -27,36 +19,52 @@ Entrée: "3 petits chats / chapeau de paille"
 Sortie: "paille chapeau"
 """
 
-
-class RhymeCompleterExecutor(AgentExecutor):
-    """AG2 AssistantAgent wrapped as an A2A AgentExecutor."""
-
-    def __init__(self) -> None:
-        # Use Google AI Studio OpenAI-compatible endpoint
-        self._model_client = OpenAIChatCompletionClient(
-            model="gemini-3.1-flash-lite-preview",
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-            api_key=os.environ["GOOGLE_STUDIO_API_KEY"],
+_CARD_SETTINGS = CardSettings(
+    name="Rhyme Completer (AG2)",
+    description=(
+        "Complète la comptine française '3 petits chats'. "
+        "Envoyez un ou plusieurs vers, l'agent retourne le suivant."
+    ),
+    version="1.0.0",
+    capabilities=AgentCapabilities(streaming=False),
+    skills=[
+        AgentSkill(
+            id="rhyme-completer",
+            name="Complete a rhyme",
+            description="Given partial verses of '3 petits chats', returns the next verse.",
+            tags=[],
+            input_modes=["text"],
+            output_modes=["text"],
         )
-        self._agent = AssistantAgent(
-            name="rhyme_completer",
-            model_client=self._model_client,
-            system_message=SYSTEM_PROMPT,
-        )
-
-    async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        # get_user_input() safely extracts all text parts from the incoming message
-        user_text = context.get_user_input()
-        result = await self._agent.run(task=user_text)
-        # AssistantAgent.run() returns a TaskResult; last message is the reply
-        last_msg = result.messages[-1]
-        text = last_msg.content if hasattr(last_msg, "content") else str(last_msg)
-        await event_queue.enqueue_event(new_agent_text_message(text))
-
-    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
-        raise NotImplementedError("cancel not supported")
+    ],
+    default_input_modes=["text"],
+    default_output_modes=["text"],
+)
 
 
-def _extract_text(context: RequestContext) -> str:
-    """Deprecated: use context.get_user_input() instead."""
-    return context.get_user_input()
+def build_agent_server(url: str) -> A2aAgentServer:
+    """Build a native AG2 A2aAgentServer for the rhyme-completer agent.
+
+    Uses autogen.AssistantAgent with the Google Gemini LLM via the ag2[gemini] extra.
+    The A2aAgentServer wraps the agent and handles AgentCard + A2A protocol natively.
+    """
+    agent = AssistantAgent(
+        name="rhyme_completer",
+        system_message=SYSTEM_PROMPT,
+        description=_CARD_SETTINGS.description,
+        llm_config={
+            "config_list": [
+                {
+                    "api_type": "google",
+                    "model": "gemini-2.0-flash-lite",
+                    "api_key": os.environ["GOOGLE_STUDIO_API_KEY"],
+                }
+            ]
+        },
+        human_input_mode="NEVER",
+    )
+    return A2aAgentServer(
+        agent=agent,
+        url=url,
+        agent_card=_CARD_SETTINGS,
+    )

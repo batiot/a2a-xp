@@ -15,9 +15,11 @@
 - [x] 2.3 Update `agents/crewai/app/main.py`: use `get_agent_card(AGENT_URL)` from CrewAI instead of manually constructing `AgentCard`; keep `a2a-sdk` for HTTP transport (CrewAI provides no built-in ASGI server)
 - [x] 2.4 Run `agents/crewai/` tests — 9/9 passed
 
-## 3. AG2 — Audit Native A2A and Document
+## 3. AG2 — Upgrade to ag2==0.11.4 and Use Native A2aAgentServer
 
-- [x] 3.1 Probe `autogen-agentchat==0.7.5`: no native A2A server primitive found (added in v0.10, not yet available at pinned version)
-- [x] 3.2 Keep existing `a2a-sdk` pattern unchanged (current implementation is already idiomatic and tested)
-- [x] 3.3 Add `agents/ag2/README.md` documenting audit findings and rationale for keeping current version
-- [x] 3.4 Run `agents/ag2/` tests — 9/9 passed
+- [x] 3.1 Replace `autogen-agentchat==0.7.5` + `autogen-ext[openai]==0.7.5` + `a2a-sdk` with `ag2[a2a,gemini]==0.11.4` in `agents/ag2/requirements.txt`
+- [x] 3.2 Rewrite `agents/ag2/app/agent.py`: use `autogen.AssistantAgent` with `llm_config` dict (`api_type: google`) + expose `build_agent_server(url)` returning native `A2aAgentServer`
+- [x] 3.3 Simplify `agents/ag2/app/main.py`: single line `app = build_agent_server(AGENT_URL).build()` — no manual `AgentCard`/`AgentExecutor`/`A2AStarletteApplication`
+- [x] 3.4 Update `agents/ag2/tests/test_app.py`: replace `RhymeCompleterExecutor` unit test with `test_native_server_builds_and_serves_agent_card` that validates `/.well-known/agent-card.json`
+- [x] 3.5 Update `agents/ag2/README.md` with native A2A usage guide
+- [x] 3.6 Run `agents/ag2/` tests — 9/9 passed

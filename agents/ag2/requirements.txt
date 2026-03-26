@@ -1,11 +1,7 @@
-# a2a-sdk — A2A protocol server plumbing (http-server extras bring starlette + sse-starlette)
-# Verify exact version with: uv run python -c "import a2a; help(a2a)"
-a2a-sdk[http-server]==0.3.25
-
-# AG2 — agent framework
-# https://github.com/ag2ai/ag2
-autogen-agentchat==0.7.5
-autogen-ext[openai]==0.7.5
+# ag2 — AG2 agent framework with native A2A server support and Google Gemini LLM
+# ag2[a2a] brings in a2a-sdk[http-server]; ag2[gemini] brings in google-genai
+# https://docs.ag2.ai/latest/docs/user-guide/a2a/server/
+ag2[a2a,gemini]==0.11.4
 
 # ASGI server
 uvicorn[standard]==0.42.0

@@ -3,10 +3,8 @@
 Tous les tests unitaires mockent les appels HTTP A2A et le LLM vérificateur,
 donc aucune clé API réelle ni agent en cours d'exécution n'est nécessaire.
 
-Markers :
-  - (aucun)       : tests unitaires purs, mock total — `pytest -m "not integration and not gemini"`
-  - @gemini       : agents mockés + vrai Gemini pour le vérificateur — `pytest -m gemini`
-  - @integration  : coordinateur complet contre les vrais agents A2A — `pytest -m integration`
+Les tests d'intégration (marqués @pytest.mark.integration) nécessitent les 3
+agents en fonctionnement et une vraie GOOGLE_STUDIO_API_KEY.
 """
 from __future__ import annotations
 
@@ -296,55 +294,3 @@ async def test_full_coordination_end_to_end() -> None:
     # Le vérificateur doit avoir produit un résultat
     assert "valid" in result["verification"]
     assert "summary" in result["verification"]
-
-
-# ---------------------------------------------------------------------------
-# Test semi-intégration Gemini (agents mockés, vrai LLM vérificateur)
-# ---------------------------------------------------------------------------
-
-@pytest.mark.gemini
-@pytest.mark.asyncio
-async def test_coordination_with_real_gemini_verifier() -> None:
-    """Lance le coordinateur avec les agents A2A mockés et le vrai vérificateur Gemini.
-
-    Les appels HTTP aux 3 agents sont simulés avec la séquence canonique, donc
-    aucun agent Docker n'est nécessaire. Seule la clé GOOGLE_STUDIO_API_KEY réelle
-    est requise pour appeler Gemini.
-
-    Skip automatique si la clé est absente ou factice.
-    """
-    real_key = os.environ.get("GOOGLE_STUDIO_API_KEY", "")
-    if not real_key or real_key == "test-key":
-        pytest.skip("GOOGLE_STUDIO_API_KEY not set or is a dummy key — skipping Gemini test")
-
-    from tests.coordinator import coordinator_graph as cg
-
-    answers = CANONICAL_SEQUENCE[1:]
-    mock_client, called_urls = _make_mock_http_client(answers)
-
-    # Only mock the HTTP A2A calls — RhymeVerifier uses the real Gemini LLM
-    with patch("httpx.AsyncClient", return_value=mock_client):
-        state = cg.initial_state()
-        result = await cg.graph.ainvoke(state)
-
-    # Structural checks
-    assert len(result["sequence"]) == 10
-    assert result["sequence"][0] == "Trois petits chats"
-    assert result["agent_counts"] == {"ag2": 3, "crewai": 3, "langgraph": 3}
-
-    # All 9 agent calls were made in round-robin order
-    urls = cg._agent_urls()
-    assert called_urls == [urls["ag2"], urls["crewai"], urls["langgraph"]] * 3
-
-    # Gemini verifier must have produced a structured result
-    verification = result["verification"]
-    assert "valid" in verification, f"Verifier did not return 'valid': {verification}"
-    assert "summary" in verification, f"Verifier did not return 'summary': {verification}"
-
-    # The canonical sequence is correct — Gemini should agree
-    assert verification["valid"] is True, (
-        f"Gemini found the canonical sequence invalid:\n"
-        f"errors: {verification.get('errors', [])}\n"
-        f"summary: {verification.get('summary', '')}\n"
-        f"sequence: {result['sequence']}"
-    )

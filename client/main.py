@@ -41,17 +41,17 @@ def fetch_agent_card(base_url: str, timeout: float = 5.0) -> dict[str, Any] | No
 
 
 def send_task(base_url: str, user_text: str, timeout: float = 30.0) -> dict[str, Any] | None:
-    """Send an A2A tasks/send JSON-RPC request and return the parsed response."""
-    task_id = str(uuid.uuid4())
+    """Send an A2A message/send JSON-RPC request and return the parsed response."""
+    message_id = str(uuid.uuid4())
     payload = {
         "jsonrpc": "2.0",
-        "id": task_id,
-        "method": "tasks/send",
+        "id": message_id,
+        "method": "message/send",
         "params": {
-            "id": task_id,
             "message": {
                 "role": "user",
-                "parts": [{"type": "text", "text": user_text}],
+                "messageId": message_id,
+                "parts": [{"kind": "text", "text": user_text}],
             },
         },
     }
@@ -59,8 +59,8 @@ def send_task(base_url: str, user_text: str, timeout: float = 30.0) -> dict[str,
         resp = httpx.post(base_url, json=payload, timeout=timeout)
         resp.raise_for_status()
         response = resp.json()
-        result_id = response.get("result", {}).get("id", task_id)
-        logger.info("A2A task submitted", extra={"task_id": result_id, "agent_url": base_url})
+        result_id = response.get("result", {}).get("messageId", message_id)
+        logger.info("A2A task sent", extra={"message_id": result_id, "agent_url": base_url})
         return response
     except httpx.HTTPError as exc:
         logger.error("Failed to send task to %s: %s", base_url, exc)
@@ -68,24 +68,36 @@ def send_task(base_url: str, user_text: str, timeout: float = 30.0) -> dict[str,
 
 
 def extract_result_text(response: dict[str, Any] | None) -> str:
-    """Pull the text result from an A2A tasks/send response."""
+    """Pull the text result from an A2A message/send response."""
     if response is None:
         return "[no response]"
 
+    if "error" in response:
+        error = response["error"]
+        return f"[ERROR] {error.get('message', 'unknown error')}"
+
     result = response.get("result", {})
+    kind = result.get("kind", "")
 
-    # Check for task failure
-    state = result.get("status", {}).get("state", "")
-    if state == "failed":
-        error = result.get("status", {}).get("error", {})
-        return f"[FAILED] {error.get('message', 'unknown error')}"
-
-    # Try to extract text from artifacts
-    artifacts = result.get("artifacts", [])
-    for artifact in artifacts:
-        for part in artifact.get("parts", []):
-            if part.get("type") == "text":
+    # message/send returns a Message object directly
+    if kind == "message":
+        for part in result.get("parts", []):
+            if part.get("kind") == "text":
                 return part["text"]
+        return "[empty message]"
+
+    # task response (for streaming / resubscribe flows)
+    if kind == "task":
+        status = result.get("status", {})
+        if status.get("state") == "failed":
+            error = status.get("error", {})
+            return f"[FAILED] {error.get('message', 'unknown error')}"
+        artifacts = result.get("artifacts", [])
+        for artifact in artifacts:
+            for part in artifact.get("parts", []):
+                if part.get("kind") == "text":
+                    return part["text"]
+        return "[empty task result]"
 
     # Fallback: stringify the whole result
     return str(result) if result else "[empty result]"

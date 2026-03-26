@@ -45,8 +45,8 @@ class RhymeCompleterExecutor(AgentExecutor):
         )
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        # Extract user text from the A2A message parts
-        user_text = _extract_text(context)
+        # get_user_input() safely extracts all text parts from the incoming message
+        user_text = context.get_user_input()
         result = await self._agent.run(task=user_text)
         # AssistantAgent.run() returns a TaskResult; last message is the reply
         last_msg = result.messages[-1]
@@ -58,11 +58,5 @@ class RhymeCompleterExecutor(AgentExecutor):
 
 
 def _extract_text(context: RequestContext) -> str:
-    """Extract plain text from the first text part of the incoming A2A message."""
-    try:
-        parts = context.message.parts
-        texts = [p.root.text for p in parts if hasattr(p, "root") and hasattr(p.root, "text")]
-        return " ".join(texts) if texts else ""
-    except AttributeError:
-        # Fallback: stringify the whole message
-        return str(context.message)
+    """Deprecated: use context.get_user_input() instead."""
+    return context.get_user_input()

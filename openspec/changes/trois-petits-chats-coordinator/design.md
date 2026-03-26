@@ -28,7 +28,7 @@ class CoordinatorState(TypedDict):
     turn: int                    # tour global (0..8)
     agent_counts: dict[str, int] # nb d'appels par agent {"ag2":0,"crewai":0,"langgraph":0}
     current_verse: str           # vers courant à envoyer au prochain agent
-    done: bool                   # True quand les 3 agents ont été appelés 3x chacun
+    verification: dict           # résultat du vérificateur final
 ```
 
 Le graphe contient :

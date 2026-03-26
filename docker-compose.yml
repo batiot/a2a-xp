@@ -2,14 +2,13 @@
 # Requires Docker Compose >= 2.20
 #
 # Usage:
-#   docker compose up                        # all agents + infra
+#   docker compose up                        # all agents
 #   docker compose --profile ag2 up         # AG2 only
 #   docker compose --profile crewai up      # CrewAI only
-#   docker compose --profile langgraph up   # LangGraph + infra
+#   docker compose --profile langgraph up   # LangGraph only (no infra required)
 #   docker compose run client               # run the test client once
 
 include:
-  - path: infra/docker-compose.yml
   - path: agents/ag2/docker-compose.yml
   - path: agents/crewai/docker-compose.yml
   - path: agents/langgraph/docker-compose.yml

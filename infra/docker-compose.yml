@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-langgraph}
       POSTGRES_USER: ${POSTGRES_USER:-langgraph}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-langgraph_secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGEME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

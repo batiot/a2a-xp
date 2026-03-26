@@ -12,7 +12,7 @@ services:
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
       LANGCHAIN_TRACING_V2: "false"
       # Postgres connection for checkpointing
-      POSTGRES_URI: postgresql://${POSTGRES_USER:-langgraph}:${POSTGRES_PASSWORD:-langgraph_secret}@postgres:5432/${POSTGRES_DB:-langgraph}
+      POSTGRES_URI: postgresql://${POSTGRES_USER:-langgraph}:${POSTGRES_PASSWORD:-CHANGEME}@postgres:5432/${POSTGRES_DB:-langgraph}
       # Redis for task queue
       REDIS_URI: redis://redis:6379
       # Tell Agent Server which graphs to serve (matches langgraph.json)
@@ -34,7 +34,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-langgraph}
       POSTGRES_USER: ${POSTGRES_USER:-langgraph}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-langgraph_secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGEME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

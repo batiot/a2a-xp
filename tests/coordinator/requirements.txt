@@ -1,0 +1,11 @@
+# LangGraph and LangChain dependencies
+langgraph==1.1.3
+langchain-core==1.2.22
+langchain-google-genai==4.2.1
+
+# HTTP client for A2A calls
+httpx==0.28.1
+
+# Testing
+pytest==9.0.2
+pytest-asyncio==1.3.0

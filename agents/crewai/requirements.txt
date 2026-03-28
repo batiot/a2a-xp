@@ -4,6 +4,9 @@ a2a-sdk[http-server]==0.3.25
 # CrewAI — agent framework
 # https://github.com/crewaiinc/crewai
 crewai==1.11.1
+aiocache==0.12.3
+# Native Google Gen AI provider for crewai LLM (crewai[google-genai])
+google-genai==1.65.0
 
 # ASGI server
 uvicorn[standard]==0.42.0

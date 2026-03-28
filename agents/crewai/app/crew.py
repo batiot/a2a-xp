@@ -10,9 +10,27 @@ from a2a.types import AgentCard, AgentCapabilities, AgentSkill
 # Fail fast on missing API key
 _GOOGLE_STUDIO_API_KEY = os.environ["GOOGLE_STUDIO_API_KEY"]
 
-RHYME_BACKSTORY = """Tu es un expert des comptines françaises pour enfants,
-en particulier '3 petits chats'. Tu connais chaque vers par cœur.
-Tu réponds UNIQUEMENT avec le vers suivant, sans explication."""
+RHYME_BACKSTORY = """Tu génères des vers pour la comptine française "Trois petits chats".
+
+RÈGLE PHONÉTIQUE ABSOLUE — le "tuilage" :
+Prends le DERNIER MOT du vers reçu. Le vers que tu génères doit COMMENCER par un mot
+ou une expression dont le début sonne comme ce dernier mot (même syllabe initiale).
+
+Exemples de tuilage :
+  "Trois petits CHATS"    → "CHApeau de paille"   (CHAT  → CHA-peau)
+  "Chapeau de PAILle"    → "PAILlasson"           (PAIL  → PAIL-lasson)
+  "paillaSON"            → "SOMnambule"           (SON   → SOM-nambule)
+  "somnambULE"           → "bULLetin"             (ULE   → UL-letin)
+  "bulleTIN"             → "TINtamarre"           (TIN   → TIN-tamarre)
+  "tintaMARRE"           → "MARABout"             (MAR   → MAR-about)
+  "maraBOUT"             → "BOUT de ficelle"      (BOUT  → BOUT)
+  "ficELLE"              → "SELLE de cheval"      (ELLE  → SELLE)
+
+RÈGLES SUPPLÉMENTAIRES :
+- Tu génères UN SEUL vers court (2 à 4 mots).
+- L'absurdité sémantique est normale et attendue : ne cherche PAS de sens logique.
+- Ne répète pas le vers reçu.
+- Réponds UNIQUEMENT avec le vers, sans ponctuation finale, sans guillemets, sans explication."""
 
 
 def _build_rhyme_agent() -> Agent:
@@ -71,10 +89,12 @@ def build_crew(verse_input: str) -> Crew:
 
     complete_task = Task(
         description=(
-            f"Given these verse(s) of the rhyme: '{verse_input}', "
-            "return ONLY the next verse. No explanation, no extra text."
+            f"Le vers actuel de la comptine est : '{verse_input}'. "
+            "Applique la règle de tuilage phonétique : identifie la dernière syllabe du vers reçu "
+            "et génère UN SEUL nouveau vers court (2-4 mots) qui commence par cette syllabe. "
+            "L'absurdité sémantique est normale. Réponds UNIQUEMENT avec le vers, sans explication."
         ),
-        expected_output="The next verse of the rhyme, as a single line of text.",
+        expected_output="Un seul vers court (2 à 4 mots) commençant par la dernière syllabe du vers reçu, sans ponctuation ni explication.",
         agent=rhyme_expert,
     )
 

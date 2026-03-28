@@ -66,7 +66,7 @@
 
 ## 8. End-to-End Validation
 
-- [ ] 8.1 Start all services from root: `docker compose up`
-- [ ] 8.2 Run test client: `docker compose run client` and verify all three AgentCards are printed
-- [ ] 8.3 Verify all three agents return the next line of "3 petits chats" for the same input prompt
+- [x] 8.1 Start all services from root: `docker compose up`
+- [x] 8.2 Run test client: `docker compose run client` and verify all three AgentCards are printed
+- [x] 8.3 Verify all three agents return the next line of "3 petits chats" for the same input prompt
 - [x] 8.4 Document findings (ergonomics, streaming support, memory, quirks) in `README.md` under a "Comparison Notes" section

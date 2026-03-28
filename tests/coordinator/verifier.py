@@ -12,11 +12,24 @@ import re
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 
-VERIFIER_PROMPT = """Tu es un expert de la comptine française "Trois petits chats".
+VERIFIER_PROMPT = """Tu es un expert de la comptine française "Trois petits chats" et du jeu de tuilage phonétique.
 On te donne une séquence de vers produite par plusieurs agents IA.
 
-Règle : chaque vers doit dériver phonétiquement du précédent — la dernière syllabe
-ou le mot final du vers N devient le début du vers N+1 (jeu de paronymie).
+RÈGLE DE TUILAGE : La dernière syllabe du vers N doit être la première syllabe du vers N+1.
+Exemples valides :
+  "Trois petits CHATS" → "CHApeau de paille"  ✓  (CHA)
+  "Chapeau de PAILle" → "PAILlasson"          ✓  (PAIL)
+  "paillaSON"         → "SOMnambule"          ✓  (SON→SOM, phonétiquement proches)
+  "somnambULE"        → "bULLetin"            ✓  (ULE→UL)
+  "bulleTIN"          → "TINtamarre"          ✓  (TIN)
+  "tintaMARRE"        → "MARABout"            ✓  (MAR)
+  "maraBOUT"          → "BOUT de ficelle"     ✓  (BOUT)
+  "ficELLE"           → "SELLE de cheval"     ✓  (ELLE→SELLE)
+  "cheVAL"            → "VALse" ou similaire  ✓  (VAL)
+
+IMPORTANT : L'absurdité sémantique est NORMALE et attendue dans cette comptine.
+Juge uniquement le lien phonétique, pas la cohérence du sens.
+Sois clément : une approximation phonétique proche (ex. "-son" → "som-") est acceptée.
 
 La séquence doit commencer par "Trois petits chats".
 
@@ -24,7 +37,7 @@ Séquence à vérifier (un vers par ligne) :
 {sequence}
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans explication :
-{{"valid": true|false, "errors": ["description des problèmes si invalid"], "summary": "résumé court"}}"""
+{{"valid": true|false, "errors": ["vers N : attendu début proche de X, obtenu Y"], "summary": "résumé court"}}"""
 
 
 class RhymeVerifier:
@@ -43,7 +56,14 @@ class RhymeVerifier:
         numbered = "\n".join(f"{i + 1}. {verse}" for i, verse in enumerate(sequence))
         prompt = VERIFIER_PROMPT.format(sequence=numbered)
         response = await self._llm.ainvoke([HumanMessage(content=prompt)])
-        return _parse_verifier_response(response.content)
+        content = response.content
+        # langchain-google-genai may return content as a list of content blocks
+        if isinstance(content, list):
+            content = "".join(
+                block["text"] for block in content
+                if isinstance(block, dict) and block.get("type") == "text"
+            )
+        return _parse_verifier_response(content)
 
 
 def _parse_verifier_response(content: str) -> dict:

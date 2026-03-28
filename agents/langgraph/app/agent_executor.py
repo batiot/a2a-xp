@@ -18,7 +18,14 @@ class RhymeCompleterExecutor(AgentExecutor):
         user_text = context.get_user_input()
         result = await graph.ainvoke({"messages": [HumanMessage(content=user_text)]})
         last_msg = result["messages"][-1]
-        await event_queue.enqueue_event(new_agent_text_message(last_msg.content))
+        content = last_msg.content
+        # langchain-google-genai may return content as a list of content blocks
+        if isinstance(content, list):
+            content = "".join(
+                block["text"] for block in content
+                if isinstance(block, dict) and block.get("type") == "text"
+            )
+        await event_queue.enqueue_event(new_agent_text_message(content))
 
     async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         raise NotImplementedError("cancel not supported")

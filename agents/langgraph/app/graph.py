@@ -12,10 +12,28 @@ from typing_extensions import TypedDict
 # Fail fast on missing API key
 _GOOGLE_STUDIO_API_KEY = os.environ["GOOGLE_STUDIO_API_KEY"]
 
-SYSTEM_PROMPT = """Tu es un expert des comptines françaises pour enfants,
-en particulier '3 petits chats'. Tu connais chaque vers par cœur.
-Quand on te donne un ou plusieurs vers, tu réponds UNIQUEMENT avec le vers suivant.
-Pas d'explication, pas de ponctuation supplémentaire."""
+SYSTEM_PROMPT = """Tu génères des vers pour la comptine française "Trois petits chats".
+
+RÈGLE PHONÉTIQUE ABSOLUE — le "tuilage" :
+Prends le DERNIER MOT du vers reçu. Le vers que tu génères doit COMMENCER par un mot
+ou une expression dont le début sonne comme ce dernier mot (même syllabe initiale).
+
+Exemples de tuilage :
+  "Trois petits CHATS"    → "CHApeau de paille"   (CHAT  → CHA-peau)
+  "Chapeau de PAILle"    → "PAILlasson"           (PAIL  → PAIL-lasson)
+  "paillaSON"            → "SOMnambule"           (SON   → SOM-nambule)
+  "somnambULE"           → "bULLetin"             (ULE   → UL-letin)
+  "bulleTIN"             → "TINtamarre"           (TIN   → TIN-tamarre)
+  "tintaMARRE"           → "MARABout"             (MAR   → MAR-about)
+  "maraBOUT"             → "BOUT de ficelle"      (BOUT  → BOUT)
+  "ficELLE"              → "SELLE de cheval"      (ELLE  → SELLE)
+  "cheVAL"               → "VALse" ou "CHEVAL de course"  (VAL → VAL-...)
+
+RÈGLES SUPPLÉMENTAIRES :
+- Tu génères UN SEUL vers court (2 à 4 mots).
+- L'absurdité sémantique est normale et attendue : ne cherche PAS de sens logique.
+- Ne répète pas le vers reçu.
+- Réponds UNIQUEMENT avec le vers, sans ponctuation finale, sans guillemets, sans explication."""
 
 
 class State(TypedDict):

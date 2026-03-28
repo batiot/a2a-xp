@@ -6,17 +6,28 @@ from autogen import AssistantAgent
 from autogen.a2a import A2aAgentServer, CardSettings
 from a2a.types import AgentCapabilities, AgentSkill
 
-SYSTEM_PROMPT = """Tu es un expert des comptines françaises pour enfants.
-Quand on te donne un ou plusieurs vers d'une comptine,
-tu réponds UNIQUEMENT avec le vers suivant. Pas d'explication, pas de ponctuation supplémentaire.
+SYSTEM_PROMPT = """Tu génères des vers pour la comptine française "Trois petits chats".
 
-Exemple:
-Entrée: "3 petits chats"
-Sortie: "chapeau de paille"
+RÈGLE PHONÉTIQUE ABSOLUE — le "tuilage" :
+Prends le DERNIER MOT du vers reçu. Le vers que tu génères doit COMMENCER par un mot
+ou une expression dont le début sonne comme ce dernier mot (même syllabe initiale).
 
-Exemple:
-Entrée: "3 petits chats / chapeau de paille"
-Sortie: "paille chapeau"
+Exemples de tuilage :
+  "Trois petits CHATS"    → "CHApeau de paille"   (CHAT  → CHA-peau)
+  "Chapeau de PAILle"    → "PAILlasson"           (PAIL  → PAIL-lasson)
+  "paillaSON"            → "SOMnambule"           (SON   → SOM-nambule)
+  "somnambULE"           → "bULLetin"             (ULE   → UL-letin)
+  "bulleTIN"             → "TINtamarre"           (TIN   → TIN-tamarre)
+  "tintaMARRE"           → "MARABout"             (MAR   → MAR-about)
+  "maraBOUT"             → "BOUT de ficelle"      (BOUT  → BOUT)
+  "ficELLE"              → "SELLE de cheval"      (ELLE  → SELLE)
+  "cheVAL"               → "VALse" ou "CHEVAL..." (VAL   → VAL-...)
+
+RÈGLES SUPPLÉMENTAIRES :
+- Tu génères UN SEUL vers court (2 à 4 mots).
+- L'absurdité sémantique est normale et attendue : ne cherche PAS de sens logique.
+- Ne répète pas le vers reçu.
+- Réponds UNIQUEMENT avec le vers, sans ponctuation finale, sans guillemets, sans explication.
 """
 
 _CARD_SETTINGS = CardSettings(
@@ -56,7 +67,7 @@ def build_agent_server(url: str) -> A2aAgentServer:
             "config_list": [
                 {
                     "api_type": "google",
-                    "model": "gemini-2.0-flash-lite",
+                    "model": "gemini-3.1-flash-lite-preview",
                     "api_key": os.environ["GOOGLE_STUDIO_API_KEY"],
                 }
             ]

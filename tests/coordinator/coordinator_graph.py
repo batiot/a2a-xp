@@ -47,7 +47,12 @@ class CoordinatorState(TypedDict):
 # Helper: appel A2A JSON-RPC
 # ---------------------------------------------------------------------------
 async def _call_a2a_agent(url: str, verse: str) -> str:
-    """Envoie un vers à un agent A2A et retourne le vers suivant."""
+    """Envoie un vers à un agent A2A et retourne le vers suivant.
+
+    Handles two A2A response shapes:
+    - message format (CrewAI, LangGraph): result.kind == "message" → result.parts[].text
+    - task format (AG2):  result.kind == "task" → result.artifacts[n].parts[].text
+    """
     payload = {
         "jsonrpc": "2.0",
         "id": str(uuid.uuid4()),
@@ -66,9 +71,18 @@ async def _call_a2a_agent(url: str, verse: str) -> str:
         body = resp.json()
 
     result = body.get("result", {})
+
+    # Message format: parts directly on result
     for part in result.get("parts", []):
         if part.get("kind") == "text":
             return part["text"].strip()
+
+    # Task format: parts nested inside artifacts
+    for artifact in result.get("artifacts", []):
+        for part in artifact.get("parts", []):
+            if part.get("kind") == "text":
+                return part["text"].strip()
+
     raise ValueError(f"Aucun texte dans la réponse A2A de {url}: {body}")
 
 
